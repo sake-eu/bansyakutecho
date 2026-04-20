@@ -1,41 +1,1461 @@
-了解しました。提案通り全て実装します。以下の変更を加えます:
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>晩酌手帖 | Banshaku Techō</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Kaisei+Decol:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
 
-**削除:**
-- 月報タブ削除(暦タブにサマリーを統合)
-- 勲章を23個 → 12個に整理
+*{box-sizing:border-box;margin:0;padding:0}
 
-**追加:**
-- A: ★評価(3段階)
-- B: ワンタップ再注文ボタン(直近の銘柄を1タップ再記録)
-- C: SNS画像シェア(月報カードを画像保存)
+:root{
+  --paper:#f7f1e3;
+  --paper-dark:#ede4d0;
+  --wood-light:#d4a574;
+  --wood:#a67848;
+  --wood-dark:#6b4423;
+  --ink:#2c1810;
+  --ink-soft:#5c4332;
+  --ink-muted:#8b7355;
+  --accent-amber:#c77d2c;
+  --accent-wine:#8b2635;
+  --accent-moss:#5a6e3a;
+  --accent-indigo:#2d4a5e;
+  --gold:#b8860b;
+  --gold-bright:#daa520;
+  --cream:#faf6ed;
+  --shadow:rgba(107,68,35,0.15);
+  --shadow-strong:rgba(107,68,35,0.25);
+  --radius:4px;
+  --font-display:'Shippori Mincho',serif;
+  --font-body:'Kaisei Decol',serif;
+  --font-latin:'Cormorant Garamond',serif;
+}
 
-作業を進めます。シンプル化と新機能追加を完了しました。
+html,body{height:100%}
+body{
+  font-family:var(--font-body);color:var(--ink);min-height:100vh;line-height:1.6;
+  background-color:var(--paper);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(166,120,72,0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(139,38,53,0.03) 0%, transparent 40%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.30 0 0 0 0 0.18 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
-## 📉 削除・整理したもの
+.app{max-width:520px;margin:0 auto;padding:1.5rem 1.25rem 4rem;position:relative}
 
-- **月報タブ削除** → 暦タブの下部に月サマリーを統合(飲酒日・総杯数・訪店数・今月の銘柄・よく訪れた店)
-- **タブ6個 → 5個に**(今宵・帳面・暦・図鑑・勲章)
-- **勲章 23個 → 12個に厳選**
-  - 残した核心的なもの:初記録・10回・50回・100回、5種・全9種、銘柄5・銘柄25、宅飲み、5店巡り、独酌、共に一献
-  - 削除:365回(遠すぎる)、銘柄50(重複)、10店、常連、5人の友、20人、週3、金曜党、土曜党、七曜制覇、夜梟、四季
-- **季節・曜日・深夜判定などの重いロジック削除** → メンテナンスコスト大幅減
+.masthead{
+  text-align:center;padding:1rem 0 1.25rem;
+  border-bottom:1px double var(--wood);margin-bottom:1.5rem;position:relative;
+}
+.masthead::before,.masthead::after{content:'';position:absolute;bottom:-4px;height:1px;background:var(--wood)}
+.masthead::before{left:20%;right:20%}
+.brand-kanji{
+  font-family:var(--font-display);font-size:32px;font-weight:700;
+  letter-spacing:0.35em;color:var(--ink);text-indent:0.35em;margin-bottom:4px;
+}
+.brand-romaji{
+  font-family:var(--font-latin);font-style:italic;font-size:13px;
+  letter-spacing:0.3em;color:var(--ink-muted);text-transform:uppercase;
+}
+.brand-seal{
+  display:inline-block;margin-top:8px;padding:2px 10px;
+  font-family:var(--font-display);font-size:10px;letter-spacing:0.2em;
+  color:var(--accent-wine);border:1px solid var(--accent-wine);border-radius:1px;
+}
 
-## ✨ 追加した3機能
+/* タブ(5個に) */
+.tabs{
+  display:flex;margin-bottom:1.5rem;border-bottom:2px solid var(--wood);
+  position:relative;
+}
+.tab{
+  flex:1;padding:10px 4px;font-family:var(--font-display);font-size:13px;
+  font-weight:500;letter-spacing:0.15em;color:var(--ink-muted);
+  background:none;border:none;cursor:pointer;position:relative;transition:color 0.3s;
+}
+.tab::after{
+  content:'';position:absolute;bottom:-2px;left:50%;right:50%;height:3px;
+  background:var(--accent-wine);transition:all 0.3s ease;
+}
+.tab.active{color:var(--ink);font-weight:700}
+.tab.active::after{left:15%;right:15%}
+.tab-dot{
+  display:inline-block;width:6px;height:6px;background:var(--accent-wine);
+  border-radius:50%;margin-left:4px;vertical-align:super;
+  animation:pulse-dot 1.5s ease-in-out infinite;
+}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.3}}
 
-**A. ★評価(3段階)** — 飲酒ログの各行に★ボタンが並び、タップで評価。図鑑では銘柄ごとに「平均★」が表示され、自分だけの銘柄辞典になります。手間は「一瞬のタップ」だけ。
+.screen{display:none}
+.screen.active{display:block;animation:fadeIn 0.4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-**B. ワンタップ再注文** — 飲酒中画面のお品書きの上に「もう一杯」ブロックが出現。直近に頼んだ3つのドリンク(銘柄込み)が表示され、タップすれば即記録。同じ獺祭を3杯飲むのが3タップで完結します。
+.section-head{
+  display:flex;align-items:baseline;gap:10px;
+  margin:1.5rem 0 0.75rem;padding-bottom:6px;
+  border-bottom:1px dashed var(--wood-light);
+}
+.section-head:first-child{margin-top:0}
+.section-head h2{
+  font-family:var(--font-display);font-size:15px;font-weight:700;
+  letter-spacing:0.2em;color:var(--ink);
+}
+.section-head .en{
+  font-family:var(--font-latin);font-style:italic;font-size:11px;
+  color:var(--ink-muted);letter-spacing:0.15em;
+}
 
-**C. 月報の画像シェア** — 暦タブの月サマリー下に「今月を画像で共有」ボタン。押すと月報風の画像がPNG生成され、スマホなら共有シート(Instagram/X/LINE)が開きます。共有不可の場合は自動ダウンロードにフォールバック。
+.card{
+  background:var(--cream);border:1px solid var(--wood-light);border-radius:var(--radius);
+  padding:1.25rem;margin-bottom:1rem;
+  box-shadow:0 1px 0 rgba(255,255,255,0.8) inset, 0 2px 8px var(--shadow);position:relative;
+}
 
-## 📊 全体の変化
+.start-hero{
+  text-align:center;padding:2rem 1rem;
+  background:linear-gradient(135deg,rgba(199,125,44,0.08),rgba(139,38,53,0.08)), var(--cream);
+  border:1px solid var(--wood);border-radius:var(--radius);
+  box-shadow:0 4px 20px var(--shadow);margin-bottom:1rem;position:relative;
+}
+.start-hero::before{content:'';position:absolute;inset:4px;border:1px solid var(--wood-light);border-radius:2px;pointer-events:none}
+.start-hero .tagline-jp{font-family:var(--font-display);font-size:13px;letter-spacing:0.3em;color:var(--ink-muted);margin-bottom:4px}
+.start-hero .tagline-en{font-family:var(--font-latin);font-style:italic;font-size:11px;letter-spacing:0.2em;color:var(--ink-muted);margin-bottom:1.25rem}
+.start-btn{
+  display:inline-block;padding:14px 40px;font-family:var(--font-display);
+  font-size:16px;font-weight:700;letter-spacing:0.25em;color:var(--cream);
+  background:linear-gradient(180deg,var(--wood) 0%, var(--wood-dark) 100%);
+  border:none;border-radius:2px;cursor:pointer;
+  box-shadow:0 1px 0 rgba(255,255,255,0.2) inset, 0 -2px 0 rgba(0,0,0,0.15) inset, 0 3px 10px var(--shadow-strong);
+  transition:transform 0.15s, box-shadow 0.15s;text-indent:0.25em;
+}
+.start-btn:hover{transform:translateY(-1px);box-shadow:0 5px 16px var(--shadow-strong)}
+.start-btn:active{transform:translateY(1px)}
 
-| | Before | After |
-|---|---|---|
-| タブ数 | 6 | 5 |
-| 勲章数 | 23 | 12 |
-| 判定ロジック | 複雑(曜日・季節・深夜等) | シンプル |
-| 入力負荷軽減 | なし | 再注文ワンタップ |
-| 事業貢献機能 | なし | SNSシェア |
+.session-panel{
+  background:linear-gradient(135deg,#3e2a1a, #2c1810);color:var(--cream);
+  border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem;
+  display:grid;grid-template-columns:1fr 1fr;gap:1rem;
+  border:1px solid var(--wood-dark);box-shadow:0 4px 20px var(--shadow-strong);
+  position:relative;overflow:hidden;
+}
+.session-panel::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.85 0 0 0 0 0.6 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.panel-stat{text-align:center;position:relative;z-index:1}
+.panel-stat + .panel-stat{border-left:1px solid rgba(212,165,116,0.25)}
+.panel-label{font-family:var(--font-latin);font-size:10px;letter-spacing:0.25em;color:var(--wood-light);text-transform:uppercase;margin-bottom:4px}
+.panel-val{font-family:var(--font-display);font-size:26px;font-weight:500;color:var(--cream);letter-spacing:0.02em}
+.panel-val .unit{font-size:13px;color:var(--wood-light);margin-left:2px;font-weight:400}
 
-**機能は減ったのに、使い勝手とビジネス価値は向上**という理想的な整理ができました。メンテナンスも楽になっています。
+/* ★ 前回の注文 再注文ブロック(機能B) */
+.repeat-block{
+  background:linear-gradient(135deg, rgba(199,125,44,0.08), rgba(199,125,44,0.02));
+  border:1px dashed var(--wood);border-radius:var(--radius);
+  padding:0.9rem 1rem;margin-bottom:1rem;position:relative;
+}
+.repeat-label{
+  font-family:var(--font-display);font-size:11px;color:var(--accent-wine);
+  letter-spacing:0.2em;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;
+}
+.repeat-label::before{content:'↻';font-size:14px}
+.repeat-chips{display:flex;flex-wrap:wrap;gap:6px}
+.repeat-chip{
+  font-family:var(--font-display);font-size:13px;padding:8px 14px;
+  background:var(--cream);border:1px solid var(--wood);border-radius:2px;
+  color:var(--ink);cursor:pointer;transition:all 0.15s;box-shadow:0 1px 3px var(--shadow);
+  display:flex;align-items:center;gap:6px;
+}
+.repeat-chip:hover{background:var(--accent-amber);color:var(--cream);transform:translateY(-1px)}
+.repeat-chip .emoji{font-size:15px}
+.repeat-chip .brand{font-size:11px;color:var(--ink-muted);font-style:italic;margin-left:2px}
+.repeat-chip:hover .brand{color:rgba(255,255,255,0.85)}
+
+.drink-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.d-btn{
+  padding:14px 6px 12px;background:var(--cream);border:1px solid var(--wood-light);
+  border-radius:2px;cursor:pointer;font-family:var(--font-display);text-align:center;
+  transition:all 0.2s;position:relative;box-shadow:0 1px 3px var(--shadow);
+}
+.d-btn .emoji{font-size:22px;display:block;margin-bottom:4px;filter:saturate(0.85)}
+.d-btn .jp{display:block;font-size:13px;font-weight:600;color:var(--ink);letter-spacing:0.08em;margin-bottom:2px}
+.d-btn .en{display:block;font-family:var(--font-latin);font-style:italic;font-size:10px;color:var(--ink-muted);letter-spacing:0.1em}
+.d-btn:hover{border-color:var(--wood);background:#fffdf6;transform:translateY(-1px);box-shadow:0 3px 8px var(--shadow)}
+.d-btn.flash{background:var(--accent-amber);border-color:var(--accent-amber);transform:scale(1.04)}
+.d-btn.flash .jp,.d-btn.flash .en{color:var(--cream)}
+
+.brand-input-row{display:flex;gap:8px;margin-top:10px;align-items:stretch}
+.brand-input-row input{
+  flex:1;padding:10px 12px;font-family:var(--font-body);font-size:14px;
+  background:var(--cream);border:1px solid var(--wood-light);
+  border-radius:2px;color:var(--ink);outline:none;transition:border-color 0.2s;
+}
+.brand-input-row input:focus{border-color:var(--accent-amber)}
+.brand-input-row input::placeholder{color:var(--ink-muted);font-style:italic}
+.add-btn{
+  padding:10px 18px;font-family:var(--font-display);font-size:13px;
+  font-weight:700;letter-spacing:0.15em;background:var(--ink);
+  color:var(--cream);border:none;border-radius:2px;cursor:pointer;transition:background 0.2s;
+}
+.add-btn:hover{background:var(--ink-soft)}
+
+.meta-input{
+  display:block;width:100%;padding:10px 12px;font-family:var(--font-body);
+  font-size:14px;background:var(--cream);border:1px solid var(--wood-light);
+  border-radius:2px;color:var(--ink);outline:none;margin-bottom:8px;transition:border-color 0.2s;
+}
+.meta-input:focus{border-color:var(--accent-amber)}
+.meta-input::placeholder{color:var(--ink-muted);font-style:italic}
+
+.drink-log{
+  background:var(--paper);border:1px solid var(--wood-light);
+  border-radius:2px;padding:0.75rem 1rem;margin-top:1rem;min-height:80px;
+  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 39px,rgba(139,38,53,0.08) 39px,rgba(139,38,53,0.08) 40px);
+}
+.log-item{
+  display:grid;grid-template-columns:50px 1fr auto auto;align-items:center;
+  gap:8px;padding:6px 0;min-height:40px;font-size:13px;
+  border-bottom:1px dotted rgba(139,38,53,0.15);
+}
+.log-item:last-child{border-bottom:none}
+.log-time{font-family:var(--font-latin);font-size:12px;color:var(--ink-muted);letter-spacing:0.05em}
+.log-name{font-family:var(--font-display);color:var(--ink)}
+.log-brand{font-size:11px;color:var(--ink-muted);font-style:italic;margin-left:4px}
+/* ★評価(機能A) */
+.log-rating{
+  display:flex;gap:2px;align-items:center;
+}
+.log-star{
+  background:none;border:none;font-size:14px;cursor:pointer;
+  color:var(--wood-light);padding:2px;line-height:1;transition:color 0.15s, transform 0.15s;
+}
+.log-star.active{color:var(--gold-bright)}
+.log-star:hover{transform:scale(1.2)}
+.log-del{background:none;border:none;color:var(--ink-muted);cursor:pointer;font-size:14px;padding:2px 4px;opacity:0.4;transition:opacity 0.2s, color 0.2s}
+.log-del:hover{opacity:1;color:var(--accent-wine)}
+
+.empty-log{color:var(--ink-muted);font-size:12px;font-style:italic;text-align:center;padding:1.5rem 0;letter-spacing:0.1em}
+
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1.25rem}
+.btn{padding:14px;font-family:var(--font-display);font-size:14px;font-weight:600;letter-spacing:0.2em;cursor:pointer;border-radius:2px;transition:all 0.15s;text-indent:0.2em}
+.btn-secondary{background:transparent;color:var(--ink-soft);border:1px solid var(--wood-light)}
+.btn-secondary:hover{background:var(--paper-dark);border-color:var(--wood)}
+.btn-primary{background:linear-gradient(180deg,var(--accent-wine),#6d1e2a);color:var(--cream);border:none;box-shadow:0 2px 8px rgba(139,38,53,0.3)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(139,38,53,0.4)}
+
+.history-entry{
+  background:var(--cream);border:1px solid var(--wood-light);border-radius:2px;
+  padding:1rem 1.25rem;margin-bottom:10px;position:relative;box-shadow:0 1px 3px var(--shadow);
+}
+.history-entry::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-wine)}
+.he-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.he-date{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--ink)}
+.he-day{font-family:var(--font-latin);font-style:italic;font-size:11px;color:var(--ink-muted);letter-spacing:0.1em}
+.he-meta{font-size:12px;color:var(--ink-soft);margin-bottom:8px;line-height:1.5}
+.he-meta .meta-key{display:inline-block;font-family:var(--font-display);font-size:10px;color:var(--accent-wine);margin-right:4px;letter-spacing:0.1em}
+.he-drinks{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.he-chip{font-size:11px;padding:2px 8px;background:var(--paper-dark);border:1px solid var(--wood-light);border-radius:99px;color:var(--ink-soft);font-family:var(--font-display)}
+.he-chip .count{color:var(--accent-wine);font-weight:700;margin-left:2px}
+.he-footer{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px dashed var(--wood-light);font-size:11px;color:var(--ink-muted)}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--ink-muted)}
+.empty-state .ideogram{font-family:var(--font-display);font-size:48px;color:var(--wood-light);margin-bottom:1rem;letter-spacing:0.1em}
+.empty-state h3{font-family:var(--font-display);font-size:15px;font-weight:500;color:var(--ink-soft);letter-spacing:0.2em;margin-bottom:6px}
+.empty-state p{font-family:var(--font-latin);font-style:italic;font-size:12px;color:var(--ink-muted);letter-spacing:0.1em}
+
+.footer{text-align:center;margin-top:2rem;padding-top:1rem;border-top:1px dashed var(--wood-light);color:var(--ink-muted)}
+.footer-tagline{font-family:var(--font-latin);font-style:italic;font-size:10px;letter-spacing:0.3em;margin-bottom:12px}
+.footer-sister{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 16px;margin-top:4px;
+  background:transparent;border:1px solid var(--wood-light);border-radius:2px;
+  font-family:var(--font-display);font-size:11px;letter-spacing:0.15em;
+  color:var(--ink-muted);text-decoration:none;transition:all 0.2s;
+}
+.footer-sister:hover{background:var(--paper-dark);border-color:var(--wood);color:var(--ink-soft)}
+.footer-sister .morning-icon{font-size:13px;filter:saturate(0.7)}
+.footer-sister .arrow{font-family:var(--font-latin);font-style:italic;font-size:10px;color:var(--wood);margin-left:4px}
+.footer-note{display:block;margin-top:8px;font-family:var(--font-latin);font-style:italic;font-size:9px;letter-spacing:0.15em;color:var(--ink-muted);opacity:0.7}
+
+.suggest-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:90px;overflow-y:auto}
+.suggest-chip{font-size:11px;padding:4px 10px;background:var(--paper);border:1px solid var(--wood-light);border-radius:99px;color:var(--ink-soft);cursor:pointer;font-family:var(--font-display);transition:all 0.15s}
+.suggest-chip:hover{background:var(--wood);color:var(--cream);border-color:var(--wood)}
+
+/* ========== 勲章 ========== */
+.badge-category{margin-bottom:1.5rem}
+.badge-cat-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.75rem;padding-bottom:6px;border-bottom:1px dashed var(--wood-light)}
+.badge-cat-title{font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:0.2em;color:var(--ink)}
+.badge-cat-title::before{content:'';display:inline-block;width:6px;height:6px;background:var(--accent-wine);margin-right:8px;transform:rotate(45deg);vertical-align:middle}
+.badge-cat-progress{font-family:var(--font-latin);font-size:11px;color:var(--ink-muted);font-style:italic;letter-spacing:0.1em}
+
+.badge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.badge-card{background:var(--cream);border:1px solid var(--wood-light);border-radius:var(--radius);padding:1rem 0.5rem 0.75rem;text-align:center;position:relative;transition:all 0.2s;cursor:pointer;box-shadow:0 1px 3px var(--shadow)}
+.badge-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px var(--shadow)}
+.badge-card.locked{opacity:0.55;filter:grayscale(0.6)}
+.badge-card.locked .medal-circle{background:var(--paper-dark)!important;border-color:var(--ink-muted)!important}
+.badge-card.locked .medal-emoji{filter:grayscale(1) opacity(0.5)}
+
+.medal-circle{
+  width:64px;height:64px;margin:0 auto 0.5rem;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, #f4d07a, var(--gold-bright) 60%, var(--gold) 100%);
+  border:2px solid var(--wood-dark);display:flex;align-items:center;justify-content:center;position:relative;
+  box-shadow:0 2px 0 rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.5);
+}
+.medal-circle::before{content:'';position:absolute;inset:5px;border:1px dashed rgba(107,68,35,0.4);border-radius:50%}
+.medal-emoji{font-size:24px;position:relative;z-index:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.2))}
+.medal-bronze{background:radial-gradient(circle at 30% 30%, #e4a778, #cd7f32 60%, #8b5a2b 100%)!important}
+.medal-silver{background:radial-gradient(circle at 30% 30%, #f0f0f0, #c0c0c0 60%, #808080 100%)!important}
+.medal-gold{background:radial-gradient(circle at 30% 30%, #f4d07a, var(--gold-bright) 60%, var(--gold) 100%)!important}
+.medal-platinum{background:radial-gradient(circle at 30% 30%, #f5f0db, #c77d2c 60%, var(--accent-wine) 100%)!important}
+
+.badge-name{font-family:var(--font-display);font-size:11px;font-weight:700;color:var(--ink);letter-spacing:0.1em;margin-bottom:2px;line-height:1.3}
+.badge-desc{font-family:var(--font-latin);font-style:italic;font-size:10px;color:var(--ink-muted);line-height:1.3}
+.badge-progress-bar{margin-top:6px;height:3px;background:var(--paper-dark);border-radius:99px;overflow:hidden}
+.badge-progress-fill{height:100%;background:var(--accent-wine);border-radius:99px;transition:width 0.4s}
+.badge-ribbon{position:absolute;top:-2px;right:-2px;font-size:9px;padding:2px 6px;background:var(--accent-wine);color:var(--cream);font-family:var(--font-display);font-weight:700;letter-spacing:0.1em;border-radius:0 4px 0 4px}
+
+.medal-summary{
+  background:linear-gradient(135deg, #3e2a1a, #2c1810);color:var(--cream);
+  border:1px solid var(--wood-dark);border-radius:var(--radius);
+  padding:1.25rem;margin-bottom:1.25rem;text-align:center;position:relative;overflow:hidden;
+}
+.medal-summary::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%, rgba(218,165,32,0.15), transparent 70%);
+  pointer-events:none;
+}
+.medal-summary-num{font-family:var(--font-display);font-size:42px;font-weight:700;color:var(--gold-bright);line-height:1;position:relative;z-index:1;text-shadow:0 2px 8px rgba(218,165,32,0.3)}
+.medal-summary-num .total{font-size:20px;color:var(--wood-light);font-weight:400;margin-left:4px}
+.medal-summary-label{font-family:var(--font-latin);font-style:italic;font-size:11px;letter-spacing:0.25em;color:var(--wood-light);margin-top:4px;position:relative;z-index:1}
+
+/* ========== 解錠モーダル ========== */
+.modal-overlay{position:fixed;inset:0;background:radial-gradient(circle at center, rgba(44,24,16,0.85), rgba(0,0,0,0.95));display:none;align-items:center;justify-content:center;padding:1.5rem;z-index:1000}
+.modal-overlay.active{display:flex;animation:overlay-in 0.4s ease}
+@keyframes overlay-in{from{opacity:0}to{opacity:1}}
+.unlock-modal{
+  background:var(--cream);border:1px solid var(--wood);border-radius:var(--radius);
+  padding:2rem 1.75rem 1.5rem;max-width:380px;width:100%;
+  box-shadow:0 20px 80px rgba(0,0,0,0.5), 0 0 60px rgba(218,165,32,0.2);
+  position:relative;text-align:center;animation:modal-in 0.6s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes modal-in{0%{opacity:0;transform:scale(0.5) translateY(40px)}60%{opacity:1;transform:scale(1.05) translateY(-8px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+.unlock-modal::before{content:'';position:absolute;inset:5px;border:1px solid var(--wood-light);border-radius:2px;pointer-events:none}
+.unlock-header{font-family:var(--font-latin);font-style:italic;font-size:11px;letter-spacing:0.35em;color:var(--accent-wine);text-transform:uppercase;margin-bottom:0.25rem}
+.unlock-title{font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:0.2em;color:var(--ink);margin-bottom:1.25rem}
+.unlock-medal-wrap{position:relative;width:140px;height:140px;margin:0 auto 1.25rem}
+.unlock-rays{position:absolute;inset:-20px;background:conic-gradient(from 0deg,rgba(218,165,32,0.4) 0deg,transparent 15deg,rgba(218,165,32,0.4) 30deg,transparent 45deg,rgba(218,165,32,0.4) 60deg,transparent 75deg,rgba(218,165,32,0.4) 90deg,transparent 105deg,rgba(218,165,32,0.4) 120deg,transparent 135deg,rgba(218,165,32,0.4) 150deg,transparent 165deg,rgba(218,165,32,0.4) 180deg,transparent 195deg,rgba(218,165,32,0.4) 210deg,transparent 225deg,rgba(218,165,32,0.4) 240deg,transparent 255deg,rgba(218,165,32,0.4) 270deg,transparent 285deg,rgba(218,165,32,0.4) 300deg,transparent 315deg,rgba(218,165,32,0.4) 330deg,transparent 345deg,rgba(218,165,32,0.4) 360deg);border-radius:50%;animation:ray-spin 8s linear infinite;filter:blur(2px)}
+@keyframes ray-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.unlock-medal{position:absolute;inset:20px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #f4d07a, var(--gold-bright) 60%, var(--gold) 100%);border:3px solid var(--wood-dark);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,0.25), inset 0 -3px 8px rgba(0,0,0,0.3), inset 0 3px 8px rgba(255,255,255,0.6);animation:medal-pulse 2s ease-in-out infinite}
+@keyframes medal-pulse{0%,100%{box-shadow:0 4px 0 rgba(0,0,0,0.25), inset 0 -3px 8px rgba(0,0,0,0.3), inset 0 3px 8px rgba(255,255,255,0.6), 0 0 20px rgba(218,165,32,0.4)}50%{box-shadow:0 4px 0 rgba(0,0,0,0.25), inset 0 -3px 8px rgba(0,0,0,0.3), inset 0 3px 8px rgba(255,255,255,0.6), 0 0 40px rgba(218,165,32,0.7)}}
+.unlock-medal::before{content:'';position:absolute;inset:8px;border:2px dashed rgba(107,68,35,0.4);border-radius:50%}
+.unlock-medal-emoji{font-size:52px;position:relative;z-index:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3))}
+.unlock-name{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--ink);letter-spacing:0.15em;margin-bottom:0.5rem}
+.unlock-desc{font-family:var(--font-body);font-size:13px;color:var(--ink-soft);line-height:1.6;margin-bottom:1.5rem;padding:0 0.5rem}
+.unlock-quote{font-family:var(--font-display);font-style:italic;font-size:13px;color:var(--accent-wine);padding:0.75rem 0;margin-bottom:1.25rem;border-top:1px dashed var(--wood-light);border-bottom:1px dashed var(--wood-light);letter-spacing:0.1em}
+.unlock-close{padding:10px 36px;font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:0.25em;background:linear-gradient(180deg, var(--wood), var(--wood-dark));color:var(--cream);border:none;border-radius:2px;cursor:pointer;box-shadow:0 2px 8px var(--shadow);text-indent:0.25em;transition:transform 0.15s}
+.unlock-close:hover{transform:translateY(-1px)}
+.unlock-counter{position:absolute;top:12px;right:14px;font-family:var(--font-latin);font-style:italic;font-size:11px;color:var(--ink-muted);letter-spacing:0.1em}
+.confetti{position:absolute;width:8px;height:8px;opacity:0;pointer-events:none}
+
+/* ========== 図鑑 ========== */
+.zukan-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;padding:10px 12px;background:var(--cream);border:1px solid var(--wood-light);border-radius:2px}
+.filter-chip{font-family:var(--font-display);font-size:12px;padding:5px 12px;background:transparent;border:1px solid var(--wood-light);border-radius:99px;color:var(--ink-soft);cursor:pointer;transition:all 0.15s;letter-spacing:0.05em}
+.filter-chip.active{background:var(--accent-wine);color:var(--cream);border-color:var(--accent-wine)}
+.filter-chip:not(.active):hover{background:var(--paper-dark)}
+.zukan-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.zukan-card{background:var(--cream);border:1px solid var(--wood-light);border-radius:2px;padding:0.9rem;position:relative;box-shadow:0 1px 3px var(--shadow);transition:all 0.2s}
+.zukan-card:hover{transform:translateY(-1px);box-shadow:0 3px 8px var(--shadow)}
+.zukan-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--wood)}
+.zk-header{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
+.zk-emoji{font-size:18px}
+.zk-type{font-family:var(--font-display);font-size:11px;color:var(--ink-muted);letter-spacing:0.1em}
+.zk-brand-name{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;line-height:1.3}
+/* 平均★評価表示 */
+.zk-rating{display:flex;gap:1px;margin-bottom:6px;font-size:12px}
+.zk-rating .star{color:var(--gold-bright)}
+.zk-rating .star-empty{color:var(--paper-dark)}
+.zk-stats{display:flex;justify-content:space-between;align-items:baseline;padding-top:6px;border-top:1px dashed var(--wood-light)}
+.zk-count{font-family:var(--font-latin);font-size:20px;font-weight:600;color:var(--accent-wine);line-height:1}
+.zk-count .unit{font-size:11px;color:var(--ink-muted);margin-left:2px;font-weight:500}
+.zk-last{font-family:var(--font-latin);font-style:italic;font-size:10px;color:var(--ink-muted);letter-spacing:0.05em;text-align:right}
+.zk-last .label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:0.15em}
+.zukan-summary{
+  background:linear-gradient(135deg, rgba(199,125,44,0.12), rgba(139,38,53,0.1));
+  border:1px solid var(--wood);border-radius:var(--radius);
+  padding:1.25rem;margin-bottom:1rem;text-align:center;position:relative;
+}
+.zukan-summary::before{content:'';position:absolute;inset:4px;border:1px solid var(--wood-light);border-radius:2px;pointer-events:none}
+.zukan-summary-num{font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--accent-wine);line-height:1}
+.zukan-summary-num .unit{font-size:16px;color:var(--ink-muted);margin-left:4px;font-weight:400}
+.zukan-summary-label{font-family:var(--font-latin);font-style:italic;font-size:11px;letter-spacing:0.25em;color:var(--ink-muted);margin-top:6px}
+
+/* ========== カレンダー ========== */
+.calendar-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding:10px 12px;background:var(--cream);border:1px solid var(--wood-light);border-radius:2px}
+.cal-nav-btn{font-family:var(--font-display);font-size:16px;padding:4px 12px;background:transparent;border:none;color:var(--ink-soft);cursor:pointer;border-radius:2px;transition:all 0.15s}
+.cal-nav-btn:hover{color:var(--accent-wine);background:var(--paper-dark)}
+.cal-title{font-family:var(--font-display);font-size:15px;font-weight:700;letter-spacing:0.2em;color:var(--ink)}
+.cal-title .year{font-family:var(--font-latin);font-size:12px;color:var(--ink-muted);margin-right:6px;font-style:italic}
+.calendar{background:var(--cream);border:1px solid var(--wood-light);border-radius:2px;padding:1rem 0.75rem}
+.cal-week-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px}
+.cal-wd{text-align:center;font-family:var(--font-display);font-size:11px;color:var(--ink-muted);padding:4px 0;letter-spacing:0.15em}
+.cal-wd.sun{color:var(--accent-wine)}
+.cal-wd.sat{color:var(--accent-indigo)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day{aspect-ratio:1/1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 2px;background:var(--paper);border:1px solid transparent;border-radius:2px;font-family:var(--font-latin);font-size:12px;color:var(--ink-muted);transition:all 0.15s;cursor:default}
+.cal-day.empty{background:transparent;border-color:transparent}
+.cal-day.today{border-color:var(--accent-wine);border-width:1.5px}
+.cal-day.today .day-num{color:var(--accent-wine);font-weight:700}
+.cal-day.has-drink{background:var(--cream);cursor:pointer}
+.cal-day.has-drink:hover{transform:scale(1.05);box-shadow:0 2px 8px var(--shadow);z-index:2;border-color:var(--wood)}
+.day-num{font-size:11px;font-weight:500}
+.drink-mark{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 30%, var(--accent-amber), var(--wood));font-size:10px;box-shadow:0 1px 2px rgba(0,0,0,0.15)}
+.drink-mark.lv1{opacity:0.5;transform:translateX(-50%) scale(0.7)}
+.drink-mark.lv2{opacity:0.75;transform:translateX(-50%) scale(0.85)}
+.drink-mark.lv3{opacity:1}
+.drink-mark.lv4{background:radial-gradient(circle at 30% 30%, #d04a3a, var(--accent-wine));opacity:1;transform:translateX(-50%) scale(1.1)}
+.drink-mark-count{position:absolute;top:-2px;right:-4px;font-family:var(--font-latin);font-size:8px;color:var(--cream);background:var(--ink);border-radius:99px;padding:0 3px;line-height:1.2;font-weight:700}
+.cal-legend{display:flex;gap:14px;justify-content:center;margin-top:12px;padding-top:10px;border-top:1px dashed var(--wood-light);font-family:var(--font-display);font-size:10px;color:var(--ink-muted);letter-spacing:0.1em}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 30% 30%, var(--accent-amber), var(--wood))}
+.legend-dot.l1{opacity:0.5;transform:scale(0.7)}
+.legend-dot.l2{opacity:0.75;transform:scale(0.85)}
+.legend-dot.l4{background:radial-gradient(circle at 30% 30%, #d04a3a, var(--accent-wine));transform:scale(1.1)}
+
+/* 月サマリー(暦タブ統合) */
+.month-summary{
+  background:var(--cream);border:1px solid var(--wood-light);border-radius:2px;
+  padding:1rem 1.25rem;margin-top:1rem;
+}
+.ms-hero{text-align:center;padding:0.5rem 0 0.75rem;border-bottom:1px dashed var(--wood-light);margin-bottom:0.75rem}
+.ms-hero-num{font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--accent-wine);line-height:1}
+.ms-hero-num .unit{font-size:14px;color:var(--ink-muted);margin-left:4px;font-weight:400}
+.ms-hero-lbl{font-family:var(--font-display);font-size:11px;letter-spacing:0.25em;color:var(--ink-soft);margin-top:4px}
+.ms-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:0.75rem}
+.ms-stat{text-align:center;padding:0.5rem 0.25rem;background:var(--paper);border-radius:2px}
+.ms-stat-val{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink);line-height:1;margin-bottom:2px}
+.ms-stat-val .unit{font-size:10px;color:var(--ink-muted);margin-left:1px;font-weight:500}
+.ms-stat-lbl{font-family:var(--font-display);font-size:10px;color:var(--ink-muted);letter-spacing:0.1em}
+.ms-top{padding-top:0.5rem;border-top:1px dashed var(--wood-light)}
+.ms-top-row{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:12px}
+.ms-top-key{font-family:var(--font-display);color:var(--ink-muted);letter-spacing:0.1em;font-size:10px}
+.ms-top-val{font-family:var(--font-display);color:var(--ink);font-weight:600}
+
+/* シェアボタン(機能C) */
+.share-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:10px;margin-top:0.75rem;
+  font-family:var(--font-display);font-size:12px;font-weight:700;
+  letter-spacing:0.2em;text-indent:0.2em;
+  background:linear-gradient(180deg,var(--wood),var(--wood-dark));color:var(--cream);
+  border:none;border-radius:2px;cursor:pointer;
+  box-shadow:0 2px 8px var(--shadow);transition:transform 0.15s;
+}
+.share-btn:hover{transform:translateY(-1px)}
+.share-btn .icon{font-size:13px}
+
+/* 日詳細ポップアップ */
+.day-popup{position:fixed;bottom:0;left:0;right:0;background:var(--cream);border-top:2px solid var(--wood);border-top-left-radius:12px;border-top-right-radius:12px;padding:1.25rem 1.25rem 1.5rem;box-shadow:0 -8px 40px rgba(0,0,0,0.2);transform:translateY(100%);transition:transform 0.3s ease;z-index:500;max-width:520px;margin:0 auto}
+.day-popup.active{transform:translateY(0)}
+.day-popup-handle{width:40px;height:4px;background:var(--wood-light);border-radius:99px;margin:0 auto 0.75rem}
+.day-popup-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--wood-light)}
+.day-popup-date{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink);letter-spacing:0.1em}
+.day-popup-close{background:none;border:none;font-size:18px;color:var(--ink-muted);cursor:pointer;padding:4px}
+.day-popup-content{font-size:13px;color:var(--ink-soft);line-height:1.7;max-height:60vh;overflow-y:auto}
+
+/* シェア画像プレビュー用(非表示の生成元) */
+.share-canvas-wrap{
+  position:fixed;left:-9999px;top:-9999px;pointer-events:none;
+}
+.share-card{
+  width:540px;padding:42px 36px;
+  background:var(--cream);position:relative;
+  font-family:var(--font-display);
+  box-shadow:0 0 40px rgba(0,0,0,0.3);
+  border:2px solid var(--wood);
+}
+.share-card::before{content:'';position:absolute;inset:10px;border:1px solid var(--wood-light);pointer-events:none}
+.share-card-header{text-align:center;padding-bottom:20px;margin-bottom:20px;border-bottom:1px double var(--wood)}
+.share-card-brand{font-family:var(--font-display);font-size:22px;font-weight:700;letter-spacing:0.35em;text-indent:0.35em;color:var(--ink);margin-bottom:4px}
+.share-card-brand-en{font-family:var(--font-latin);font-style:italic;font-size:11px;letter-spacing:0.3em;color:var(--ink-muted);text-transform:uppercase}
+.share-card-month{font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:0.2em;color:var(--ink);margin:18px 0 4px;text-align:center}
+.share-card-subtitle{font-family:var(--font-latin);font-style:italic;font-size:12px;letter-spacing:0.3em;color:var(--ink-muted);text-align:center;margin-bottom:20px}
+.share-card-hero{text-align:center;padding:20px 0;background:linear-gradient(135deg,rgba(199,125,44,0.08),rgba(139,38,53,0.08));border-radius:4px;margin-bottom:20px}
+.share-card-hero-num{font-family:var(--font-display);font-size:56px;font-weight:700;color:var(--accent-wine);line-height:1}
+.share-card-hero-num .unit{font-size:20px;color:var(--ink-muted);font-weight:400;margin-left:4px}
+.share-card-hero-lbl{font-family:var(--font-display);font-size:13px;letter-spacing:0.3em;color:var(--ink-soft);margin-top:6px}
+.share-card-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.share-card-stat{text-align:center;padding:10px 6px;background:var(--paper);border:1px solid var(--wood-light);border-radius:3px}
+.share-card-stat-val{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--ink);line-height:1}
+.share-card-stat-val .unit{font-size:11px;color:var(--ink-muted);font-weight:500;margin-left:1px}
+.share-card-stat-lbl{font-family:var(--font-display);font-size:10px;color:var(--ink-muted);letter-spacing:0.12em;margin-top:3px}
+.share-card-highlight{margin-bottom:18px}
+.share-card-h-title{font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:0.2em;color:var(--ink);padding-left:10px;border-left:3px solid var(--accent-wine);margin-bottom:8px}
+.share-card-h-row{display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px dotted var(--wood-light);font-size:13px}
+.share-card-h-row:last-child{border-bottom:none}
+.share-card-h-name{font-family:var(--font-display);color:var(--ink)}
+.share-card-h-val{font-family:var(--font-latin);color:var(--accent-wine);font-weight:600;font-size:12px}
+.share-card-footer{margin-top:22px;padding-top:14px;border-top:1px dashed var(--wood-light);text-align:center;font-family:var(--font-latin);font-style:italic;font-size:10px;letter-spacing:0.3em;color:var(--ink-muted)}
+.share-card-seal{display:inline-block;padding:3px 12px;font-family:var(--font-display);font-size:11px;color:var(--accent-wine);border:1px solid var(--accent-wine);letter-spacing:0.2em;margin-top:6px}
+
+@media (max-width:400px){
+  .drink-grid{grid-template-columns:repeat(2,1fr)}
+  .badge-grid{grid-template-columns:repeat(2,1fr)}
+  .zukan-grid{grid-template-columns:1fr}
+  .panel-val{font-size:20px}
+  .brand-kanji{font-size:26px}
+  .tab{font-size:12px;letter-spacing:0.1em;padding:10px 6px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="masthead">
+  <div class="brand-kanji">晩酌手帖</div>
+  <div class="brand-romaji">Banshaku Techō</div>
+  <div class="brand-seal">飲酒記録</div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="home">今宵</button>
+  <button class="tab" data-tab="history">帳面</button>
+  <button class="tab" data-tab="calendar">暦</button>
+  <button class="tab" data-tab="zukan">図鑑</button>
+  <button class="tab" data-tab="medals">勲章<span id="tab-dot" class="tab-dot" style="display:none"></span></button>
+</nav>
+
+<!-- 今宵 -->
+<section id="screen-home" class="screen active">
+  <div id="start-view">
+    <div class="start-hero">
+      <div class="tagline-jp">今宵の一献を、記す</div>
+      <div class="tagline-en">a quiet record of tonight's pour</div>
+      <button class="start-btn" id="btn-start">記録を始める</button>
+    </div>
+    <div class="section-head"><h2>近頃の一杯</h2><span class="en">Recent Pours</span></div>
+    <div id="recent-drinks" class="card"><div class="empty-log">—</div></div>
+  </div>
+
+  <div id="drinking-view" style="display:none">
+    <div class="session-panel">
+      <div class="panel-stat">
+        <div class="panel-label">Elapsed</div>
+        <div class="panel-val" id="elapsed-time">00:00</div>
+      </div>
+      <div class="panel-stat">
+        <div class="panel-label">Pours</div>
+        <div class="panel-val" id="total-pours">0<span class="unit">杯</span></div>
+      </div>
+    </div>
+
+    <!-- 機能B: ワンタップ再注文 -->
+    <div id="repeat-block" class="repeat-block" style="display:none">
+      <div class="repeat-label">もう一杯 · Repeat</div>
+      <div class="repeat-chips" id="repeat-chips"></div>
+    </div>
+
+    <div class="section-head"><h2>お品書き</h2><span class="en">Select a Drink</span></div>
+    <div class="drink-grid" id="drink-grid"></div>
+    <div class="brand-input-row">
+      <input type="text" id="brand-input" placeholder="銘柄を添える(任意)... 例: 獺祭、山崎12年">
+      <button class="add-btn" id="btn-add-custom">其他</button>
+    </div>
+    <div class="suggest-chips" id="brand-suggest"></div>
+    <div class="section-head"><h2>店と連れ</h2><span class="en">Place &amp; Company</span></div>
+    <input type="text" class="meta-input" id="place-input" placeholder="場所・お店の名前...">
+    <input type="text" class="meta-input" id="people-input" placeholder="一緒の人... 例: 一人、田中さん">
+    <div class="section-head"><h2>帳簿</h2><span class="en">Tonight's Log</span></div>
+    <div class="drink-log" id="drink-log"><div class="empty-log">まだ何も記されていません</div></div>
+    <div class="action-row">
+      <button class="btn btn-secondary" id="btn-cancel">取消</button>
+      <button class="btn btn-primary" id="btn-end">締める</button>
+    </div>
+  </div>
+</section>
+
+<section id="screen-history" class="screen"><div id="history-content"></div></section>
+<section id="screen-calendar" class="screen"><div id="calendar-content"></div></section>
+<section id="screen-zukan" class="screen"><div id="zukan-content"></div></section>
+<section id="screen-medals" class="screen"><div id="medals-content"></div></section>
+
+<div class="footer">
+  <div class="footer-tagline">— Banshaku Techō · since tonight —</div>
+  <a class="footer-sister" href="https://hangover-tracker.example.com" target="_blank" rel="noopener">
+    <span class="morning-icon">🌅</span>
+    <span>翌朝つらい方へ · 二日酔いトラッカー</span>
+    <span class="arrow">↗</span>
+  </a>
+  <span class="footer-note">sister site for the morning after</span>
+</div>
+
+</div>
+
+<!-- 日詳細ポップアップ -->
+<div class="day-popup" id="day-popup">
+  <div class="day-popup-handle"></div>
+  <div class="day-popup-header">
+    <div class="day-popup-date" id="day-popup-date">—</div>
+    <button class="day-popup-close" id="day-popup-close">✕</button>
+  </div>
+  <div class="day-popup-content" id="day-popup-content">—</div>
+</div>
+
+<!-- シェア画像生成用の非表示エリア -->
+<div class="share-canvas-wrap" id="share-canvas-wrap">
+  <div class="share-card" id="share-card">
+    <!-- JS で動的描画 -->
+  </div>
+</div>
+
+<!-- 勲章解錠モーダル -->
+<div class="modal-overlay" id="unlock-modal">
+  <div class="unlock-modal">
+    <div class="unlock-counter" id="unlock-counter"></div>
+    <div class="unlock-header">— 勲章授与 · Medal Awarded —</div>
+    <div class="unlock-title">新たな勲章を得ました</div>
+    <div class="unlock-medal-wrap">
+      <div class="unlock-rays"></div>
+      <div class="unlock-medal" id="unlock-medal">
+        <div class="unlock-medal-emoji" id="unlock-emoji">🏅</div>
+      </div>
+    </div>
+    <div class="unlock-name" id="unlock-name">—</div>
+    <div class="unlock-desc" id="unlock-desc">—</div>
+    <div class="unlock-quote" id="unlock-quote">—</div>
+    <button class="unlock-close" id="unlock-close">承る</button>
+  </div>
+</div>
+
+<!-- html2canvas ライブラリ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+const STORE_KEY = 'banshaku_records_v1';
+const SESSION_KEY = 'banshaku_session_v1';
+const MEDALS_KEY = 'banshaku_medals_v1';
+
+const DRINKS = [
+  {id:'beer',     jp:'ビール',    en:'Beer',     emoji:'🍺'},
+  {id:'highball', jp:'ハイボール', en:'Highball', emoji:'🥃'},
+  {id:'sake',     jp:'日本酒',    en:'Sake',     emoji:'🍶'},
+  {id:'wine',     jp:'ワイン',    en:'Wine',     emoji:'🍷'},
+  {id:'chuhai',   jp:'チューハイ', en:'Chūhai',   emoji:'🥤'},
+  {id:'shochu',   jp:'焼酎',      en:'Shōchū',   emoji:'🍵'},
+  {id:'cocktail', jp:'カクテル',  en:'Cocktail', emoji:'🍹'},
+  {id:'umeshu',   jp:'梅酒',      en:'Umeshu',   emoji:'🫙'},
+  {id:'whisky',   jp:'ウイスキー', en:'Whisky',  emoji:'🥃'},
+];
+
+/* 勲章を12個に厳選 */
+const MEDAL_CATEGORIES = [
+  {id:'entries', name:'記録の道', en:'The Path of Records',
+    medals:[
+      {id:'first',      name:'一盃録',  desc:'初めての記録',  quote:'千里の道も一杯から', rank:'bronze',   emoji:'📜', target:1},
+      {id:'decade',     name:'十盃録',  desc:'10回の記録',    quote:'習慣は、形になり始めている', rank:'silver', emoji:'📖', target:10},
+      {id:'quinquag',   name:'五十盃録', desc:'50回の記録',    quote:'もはや確かな道筋', rank:'gold', emoji:'📚', target:50},
+      {id:'centennial', name:'百盃録',  desc:'100回の記録',   quote:'百の夜を、詳らかに', rank:'platinum', emoji:'🏛️', target:100},
+    ]},
+  {id:'variety', name:'酒の巡礼', en:'The Pilgrimage',
+    medals:[
+      {id:'five',    name:'五味探訪',  desc:'5種類のお酒を記録', quote:'舌が、世界を広げていく', rank:'bronze', emoji:'🍶', target:5},
+      {id:'all',     name:'九流網羅',  desc:'9種すべてのお酒を記録', quote:'すべての杯を、知る者', rank:'gold', emoji:'🍷', target:9},
+      {id:'brand5',  name:'銘酒五選', desc:'5種類の銘柄を記録', quote:'名を覚える、ということ', rank:'bronze', emoji:'🏷️', target:5},
+      {id:'brand25', name:'銘酒二十五選', desc:'25種類の銘柄を記録', quote:'あなたの辞書は、厚みを持った', rank:'gold', emoji:'🗂️', target:25},
+    ]},
+  {id:'venue', name:'街の記憶', en:'Memories of the Town',
+    medals:[
+      {id:'home',    name:'宅飲み始め', desc:'自宅での初記録', quote:'己の城で、静かに', rank:'bronze', emoji:'🏠', target:1, type:'home'},
+      {id:'venue5',  name:'五店巡り',  desc:'5つのお店を記録', quote:'暖簾を、幾度もくぐって', rank:'silver', emoji:'🏮', target:5},
+    ]},
+  {id:'company', name:'人との盃', en:'Cups Shared',
+    medals:[
+      {id:'solo',   name:'独酌一献', desc:'一人飲みを記録', quote:'己と向き合う時間もまた、酒のうち', rank:'bronze', emoji:'🌙', target:1, type:'solo'},
+      {id:'pair',   name:'共に一献', desc:'誰かと飲んだ記録', quote:'酒は、人と人を繋ぐもの', rank:'bronze', emoji:'👥', target:1, type:'withpeople'},
+    ]},
+];
+
+const ALL_MEDALS = [];
+MEDAL_CATEGORIES.forEach(cat=>{cat.medals.forEach(m=>{ALL_MEDALS.push({...m, catId:cat.id, catName:cat.name})})});
+
+function load(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]')}catch{return[]}}
+function save(r){try{localStorage.setItem(STORE_KEY,JSON.stringify(r))}catch{}}
+function loadSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{return null}}
+function saveSession(s){try{s?localStorage.setItem(SESSION_KEY,JSON.stringify(s)):localStorage.removeItem(SESSION_KEY)}catch{}}
+function loadMedals(){try{return JSON.parse(localStorage.getItem(MEDALS_KEY)||'{}')}catch{return{}}}
+function saveMedals(m){try{localStorage.setItem(MEDALS_KEY,JSON.stringify(m))}catch{}}
+
+let session = null;
+let timerInterval = null;
+let unlockQueue = [];
+let calendarViewDate = new Date();
+let zukanFilter = 'all';
+
+function init(){
+  session = loadSession();
+  renderDrinkGrid();
+  bindEvents();
+  if (session && session.active) { showDrinkingView(); startTimer(); }
+  else { showStartView(); }
+  renderRecentDrinks();
+  renderHistory();
+  renderMedals();
+  updateMedalDot();
+}
+
+function bindEvents(){
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+  document.getElementById('btn-start').addEventListener('click',startSession);
+  document.getElementById('btn-cancel').addEventListener('click',cancelSession);
+  document.getElementById('btn-end').addEventListener('click',endSession);
+  document.getElementById('btn-add-custom').addEventListener('click',addCustomBrand);
+  document.getElementById('brand-input').addEventListener('keydown',e=>{if(e.key==='Enter')addCustomBrand()});
+  document.getElementById('unlock-close').addEventListener('click',closeUnlockModal);
+  document.getElementById('day-popup-close').addEventListener('click',closeDayPopup);
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');
+  if(tab==='history')renderHistory();
+  if(tab==='home')renderRecentDrinks();
+  if(tab==='calendar')renderCalendar();
+  if(tab==='zukan')renderZukan();
+  if(tab==='medals'){
+    renderMedals();
+    const earned=loadMedals();Object.keys(earned).forEach(k=>{earned[k].seen=true});saveMedals(earned);
+    updateMedalDot();
+  }
+}
+
+function renderDrinkGrid(){
+  const grid=document.getElementById('drink-grid');
+  grid.innerHTML=DRINKS.map(d=>`<button class="d-btn" data-id="${d.id}">
+    <span class="emoji">${d.emoji}</span>
+    <span class="jp">${d.jp}</span>
+    <span class="en">${d.en}</span>
+  </button>`).join('');
+  grid.querySelectorAll('.d-btn').forEach(b=>b.addEventListener('click',()=>addDrink(b.dataset.id)));
+}
+
+function startSession(){
+  session={active:true,startTime:new Date().toISOString(),drinks:[],place:'',people:''};
+  saveSession(session);showDrinkingView();startTimer();renderBrandSuggest();renderRepeatBlock();
+}
+function cancelSession(){
+  if(session&&session.drinks.length>0){if(!confirm('記録中の内容を破棄しますか?'))return;}
+  session=null;saveSession(null);stopTimer();showStartView();
+}
+function endSession(){
+  if(!session)return;
+  if(session.drinks.length===0){
+    if(!confirm('何も記録されていません。終了しますか?'))return;
+    cancelSession();return;
+  }
+  const records=load();
+  session.place=document.getElementById('place-input').value.trim();
+  session.people=document.getElementById('people-input').value.trim();
+  session.endTime=new Date().toISOString();
+  session.active=false;
+  records.unshift(session);save(records);
+  session=null;saveSession(null);stopTimer();
+  const newlyUnlocked=checkAndUnlockMedals();
+  showStartView();renderRecentDrinks();renderHistory();renderMedals();
+  if(newlyUnlocked.length>0){unlockQueue=newlyUnlocked;showNextUnlockModal();}
+  else{switchTab('history');}
+}
+
+function addDrink(drinkId, brand){
+  if(!session)return;
+  const def=DRINKS.find(d=>d.id===drinkId);
+  if(!def&&!brand)return;
+  session.drinks.push({
+    id:drinkId||'other',
+    jp:def?def.jp:(brand||'その他'),
+    en:def?def.en:'Other',
+    emoji:def?def.emoji:'🍶',
+    brand:brand||'',
+    rating:0, // 機能A: 初期は0 (未評価)
+    time:new Date().toISOString(),
+  });
+  saveSession(session);updatePanel();renderDrinkLog();renderRepeatBlock();
+  if(drinkId){
+    const btn=document.querySelector(`.d-btn[data-id="${drinkId}"]`);
+    if(btn){btn.classList.add('flash');setTimeout(()=>btn.classList.remove('flash'),250)}
+  }
+}
+
+/* 機能B: 直近の銘柄で再注文 */
+function addRepeatDrink(idx){
+  if(!session)return;
+  const source = session.drinks[idx];
+  if(!source) return;
+  session.drinks.push({
+    id:source.id,
+    jp:source.jp,
+    en:source.en,
+    emoji:source.emoji,
+    brand:source.brand,
+    rating:0,
+    time:new Date().toISOString(),
+  });
+  saveSession(session);updatePanel();renderDrinkLog();renderRepeatBlock();
+}
+
+function removeDrink(idx){
+  if(!session)return;
+  session.drinks.splice(idx,1);
+  saveSession(session);updatePanel();renderDrinkLog();renderRepeatBlock();
+}
+
+function addCustomBrand(){
+  const input=document.getElementById('brand-input');
+  const val=input.value.trim();if(!val)return;
+  addDrink(null,val);input.value='';
+}
+
+/* 機能A: ★評価の更新 */
+function setRating(idx, rating){
+  if(!session)return;
+  const d = session.drinks[idx];
+  if(!d) return;
+  // 既に同じ値が付いていれば解除
+  d.rating = (d.rating === rating) ? 0 : rating;
+  saveSession(session);renderDrinkLog();
+}
+
+function showStartView(){
+  document.getElementById('start-view').style.display='';
+  document.getElementById('drinking-view').style.display='none';
+}
+function showDrinkingView(){
+  document.getElementById('start-view').style.display='none';
+  document.getElementById('drinking-view').style.display='';
+  document.getElementById('place-input').value=session.place||'';
+  document.getElementById('people-input').value=session.people||'';
+  updatePanel();renderDrinkLog();renderBrandSuggest();renderRepeatBlock();
+}
+
+function startTimer(){stopTimer();updateTimer();timerInterval=setInterval(updateTimer,1000)}
+function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null}}
+function updateTimer(){
+  if(!session)return;
+  const el=document.getElementById('elapsed-time');if(!el)return;
+  const ms=Date.now()-new Date(session.startTime).getTime();
+  const h=Math.floor(ms/3600000);const m=Math.floor((ms%3600000)/60000);
+  el.textContent=(h>0?h+':':'')+String(m).padStart(2,'0')+':'+String(Math.floor((ms%60000)/1000)).padStart(2,'0');
+}
+
+function updatePanel(){
+  if(!session)return;
+  document.getElementById('total-pours').innerHTML=`${session.drinks.length}<span class="unit">杯</span>`;
+  if(document.getElementById('place-input')){
+    session.place=document.getElementById('place-input').value.trim();
+    session.people=document.getElementById('people-input').value.trim();
+  }
+  saveSession(session);
+}
+
+function renderDrinkLog(){
+  const log=document.getElementById('drink-log');
+  if(!session||session.drinks.length===0){
+    log.innerHTML='<div class="empty-log">まだ何も記されていません</div>';return;
+  }
+  log.innerHTML=session.drinks.map((d,i)=>{
+    const t=new Date(d.time);
+    const hm=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+    const stars = [1,2,3].map(s=>
+      `<button class="log-star ${d.rating>=s?'active':''}" data-idx="${i}" data-r="${s}" title="★${s}">★</button>`
+    ).join('');
+    return `<div class="log-item">
+      <span class="log-time">${hm}</span>
+      <span class="log-name">${d.emoji} ${d.jp}${d.brand?`<span class="log-brand">${d.brand}</span>`:''}</span>
+      <span class="log-rating">${stars}</span>
+      <button class="log-del" data-idx="${i}" title="削除">✕</button>
+    </div>`;
+  }).join('');
+  log.querySelectorAll('.log-del').forEach(b=>b.addEventListener('click',()=>removeDrink(parseInt(b.dataset.idx))));
+  log.querySelectorAll('.log-star').forEach(b=>b.addEventListener('click',()=>setRating(parseInt(b.dataset.idx), parseInt(b.dataset.r))));
+}
+
+/* 機能B: 再注文ブロック描画 */
+function renderRepeatBlock(){
+  const block = document.getElementById('repeat-block');
+  const chipsBox = document.getElementById('repeat-chips');
+  if(!session || session.drinks.length === 0){
+    block.style.display = 'none';
+    return;
+  }
+  // 直近のユニークな3つ(新→旧、銘柄ID+銘柄名の組み合わせで重複排除)
+  const seen = new Set();
+  const unique = [];
+  for(let i = session.drinks.length - 1; i >= 0 && unique.length < 3; i--){
+    const d = session.drinks[i];
+    const key = (d.id || '')+'|'+(d.brand || '');
+    if(seen.has(key)) continue;
+    seen.add(key);
+    unique.push({idx:i, d});
+  }
+  if(unique.length === 0){ block.style.display = 'none'; return; }
+  block.style.display = '';
+  chipsBox.innerHTML = unique.map(u =>
+    `<button class="repeat-chip" data-idx="${u.idx}">
+      <span class="emoji">${u.d.emoji}</span>
+      <span>${u.d.jp}</span>
+      ${u.d.brand ? `<span class="brand">${u.d.brand}</span>` : ''}
+    </button>`
+  ).join('');
+  chipsBox.querySelectorAll('.repeat-chip').forEach(b=>
+    b.addEventListener('click', ()=>addRepeatDrink(parseInt(b.dataset.idx)))
+  );
+}
+
+function renderBrandSuggest(){
+  const box=document.getElementById('brand-suggest');
+  const records=load();
+  const brands=new Set();
+  records.forEach(r=>r.drinks.forEach(d=>{if(d.brand)brands.add(d.brand)}));
+  const arr=Array.from(brands).slice(0,12);
+  if(arr.length===0){box.innerHTML='';return;}
+  box.innerHTML=arr.map(b=>`<span class="suggest-chip" data-b="${b}">${b}</span>`).join('');
+  box.querySelectorAll('.suggest-chip').forEach(c=>c.addEventListener('click',()=>{document.getElementById('brand-input').value=c.dataset.b}));
+}
+
+function renderRecentDrinks(){
+  const box=document.getElementById('recent-drinks');
+  const records=load();
+  if(records.length===0){box.innerHTML='<div class="empty-log">帳面はまだ真っ白です</div>';return;}
+  const latest=records.slice(0,3);
+  box.innerHTML=latest.map(r=>{
+    const date=new Date(r.startTime);
+    const md=`${date.getMonth()+1}月${date.getDate()}日`;
+    const day=['日','月','火','水','木','金','土'][date.getDay()];
+    const count=r.drinks.length;
+    return `<div style="padding:8px 0;border-bottom:1px dotted var(--wood-light);display:flex;justify-content:space-between;align-items:baseline">
+      <div>
+        <span style="font-family:var(--font-display);font-weight:600;color:var(--ink)">${md}</span>
+        <span style="font-family:var(--font-latin);font-style:italic;font-size:11px;color:var(--ink-muted);margin-left:6px">(${day})</span>
+        ${r.place?`<span style="font-size:11px;color:var(--ink-muted);margin-left:8px">@ ${r.place}</span>`:''}
+      </div>
+      <div style="font-family:var(--font-latin);font-size:12px;color:var(--accent-wine);font-weight:600">${count}杯</div>
+    </div>`;
+  }).join('');
+  const last=box.lastElementChild;if(last)last.style.borderBottom='none';
+}
+
+function renderHistory(){
+  const box=document.getElementById('history-content');
+  const records=load();
+  if(records.length===0){
+    box.innerHTML=`<div class="empty-state"><div class="ideogram">無</div><h3>帳面はまだ白紙</h3><p>your log awaits its first entry</p></div>`;return;
+  }
+  box.innerHTML=`<div class="section-head"><h2>飲酒帳面</h2><span class="en">Drinking Log · ${records.length} entries</span></div>`
+    +records.map((r,idx)=>{
+    const date=new Date(r.startTime);
+    const md=`${date.getFullYear()}.${String(date.getMonth()+1).padStart(2,'0')}.${String(date.getDate()).padStart(2,'0')}`;
+    const day=['SUN','MON','TUE','WED','THU','FRI','SAT'][date.getDay()];
+    const counts={};r.drinks.forEach(d=>{const k=d.brand||d.jp;counts[k]=(counts[k]||0)+1});
+    const chips=Object.entries(counts).map(([n,c])=>`<span class="he-chip">${n}<span class="count">×${c}</span></span>`).join('');
+    return `<article class="history-entry">
+      <div class="he-header"><div class="he-date">${md}</div><div class="he-day">${day}</div></div>
+      ${r.place||r.people?`<div class="he-meta">
+        ${r.place?`<div><span class="meta-key">店</span>${r.place}</div>`:''}
+        ${r.people?`<div><span class="meta-key">連</span>${r.people}</div>`:''}
+      </div>`:''}
+      <div class="he-drinks">${chips}</div>
+      <div class="he-footer">
+        <span>${r.drinks.length}杯</span>
+        <button class="log-del" data-del="${idx}" title="削除">✕</button>
+      </div>
+    </article>`;
+  }).join('');
+  box.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+    if(!confirm('この記録を削除しますか?'))return;
+    const rs=load();rs.splice(parseInt(b.dataset.del),1);save(rs);
+    renderHistory();renderRecentDrinks();renderMedals();renderCalendar();renderZukan();
+  }));
+}
+
+/* ========== カレンダー (月サマリー統合済み) ========== */
+function renderCalendar(){
+  const box=document.getElementById('calendar-content');
+  const records=load();
+  const year=calendarViewDate.getFullYear();
+  const month=calendarViewDate.getMonth();
+
+  const dayMap={};
+  records.forEach(r=>{
+    const d=new Date(r.startTime);
+    if(d.getFullYear()===year && d.getMonth()===month){
+      const day=d.getDate();
+      if(!dayMap[day]) dayMap[day]={count:0, sessions:[]};
+      dayMap[day].count += r.drinks.length;
+      dayMap[day].sessions.push(r);
+    }
+  });
+
+  const monthSessions = records.filter(r=>{
+    const d=new Date(r.startTime);
+    return d.getFullYear()===year && d.getMonth()===month;
+  });
+  const monthPours = monthSessions.reduce((s,r)=>s+r.drinks.length,0);
+  const drinkDays = Object.keys(dayMap).length;
+
+  // 月のトップ銘柄
+  const brandCount = {};
+  monthSessions.forEach(r=>r.drinks.forEach(d=>{
+    if(d.brand) brandCount[d.brand]=(brandCount[d.brand]||0)+1;
+  }));
+  const topBrand = Object.entries(brandCount).sort((a,b)=>b[1]-a[1])[0];
+  // トップ店
+  const placeCount={};
+  monthSessions.forEach(r=>{if(r.place)placeCount[r.place]=(placeCount[r.place]||0)+1});
+  const topPlace = Object.entries(placeCount).sort((a,b)=>b[1]-a[1])[0];
+
+  const firstDay = new Date(year,month,1).getDay();
+  const lastDate = new Date(year,month+1,0).getDate();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear()===year && today.getMonth()===month;
+
+  let days='';
+  for(let i=0;i<firstDay;i++) days += '<div class="cal-day empty"></div>';
+  for(let d=1;d<=lastDate;d++){
+    const info = dayMap[d];
+    const hasDrink = !!info;
+    const isToday = isCurrentMonth && today.getDate()===d;
+    let mark='';
+    if(hasDrink){
+      const c = info.count;
+      const lv = c>=7?4 : c>=4?3 : c>=2?2 : 1;
+      mark = `<div class="drink-mark lv${lv}">${c>1?`<span class="drink-mark-count">${c}</span>`:''}</div>`;
+    }
+    days += `<div class="cal-day ${hasDrink?'has-drink':''} ${isToday?'today':''}" data-day="${d}">
+      <span class="day-num">${d}</span>
+      ${mark}
+    </div>`;
+  }
+
+  const monthNames = ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走'];
+
+  box.innerHTML = `
+    <div class="calendar-nav">
+      <button class="cal-nav-btn" id="cal-prev">‹ 前月</button>
+      <div class="cal-title"><span class="year">${year}</span>${month+1}月 · ${monthNames[month]}</div>
+      <button class="cal-nav-btn" id="cal-next">翌月 ›</button>
+    </div>
+    <div class="calendar">
+      <div class="cal-week-header">
+        <div class="cal-wd sun">日</div><div class="cal-wd">月</div><div class="cal-wd">火</div>
+        <div class="cal-wd">水</div><div class="cal-wd">木</div><div class="cal-wd">金</div>
+        <div class="cal-wd sat">土</div>
+      </div>
+      <div class="cal-grid">${days}</div>
+      <div class="cal-legend">
+        <span class="legend-item"><span class="legend-dot l1"></span>1杯</span>
+        <span class="legend-item"><span class="legend-dot l2"></span>2-3</span>
+        <span class="legend-item"><span class="legend-dot"></span>4-6</span>
+        <span class="legend-item"><span class="legend-dot l4"></span>7+</span>
+      </div>
+    </div>
+    ${monthSessions.length>0?`
+    <div class="month-summary">
+      <div class="ms-hero">
+        <div class="ms-hero-num">${monthSessions.length}<span class="unit">夜</span></div>
+        <div class="ms-hero-lbl">— 今月の晩酌 —</div>
+      </div>
+      <div class="ms-stats">
+        <div class="ms-stat"><div class="ms-stat-val">${drinkDays}<span class="unit">日</span></div><div class="ms-stat-lbl">飲酒日</div></div>
+        <div class="ms-stat"><div class="ms-stat-val">${monthPours}<span class="unit">杯</span></div><div class="ms-stat-lbl">総杯数</div></div>
+        <div class="ms-stat"><div class="ms-stat-val">${Object.keys(placeCount).length}<span class="unit">軒</span></div><div class="ms-stat-lbl">訪れた店</div></div>
+      </div>
+      ${topBrand||topPlace?`<div class="ms-top">
+        ${topBrand?`<div class="ms-top-row"><span class="ms-top-key">今月の銘柄</span><span class="ms-top-val">${topBrand[0]} (${topBrand[1]}回)</span></div>`:''}
+        ${topPlace?`<div class="ms-top-row"><span class="ms-top-key">よく訪れた店</span><span class="ms-top-val">${topPlace[0]} (${topPlace[1]}回)</span></div>`:''}
+      </div>`:''}
+      <button class="share-btn" id="btn-share-month">
+        <span class="icon">📤</span>
+        <span>今月を画像で共有</span>
+      </button>
+    </div>
+    `:''}
+  `;
+
+  document.getElementById('cal-prev').addEventListener('click',()=>{
+    calendarViewDate = new Date(year, month-1, 1); renderCalendar();
+  });
+  document.getElementById('cal-next').addEventListener('click',()=>{
+    calendarViewDate = new Date(year, month+1, 1); renderCalendar();
+  });
+  box.querySelectorAll('.cal-day.has-drink').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const day = parseInt(el.dataset.day);
+      openDayPopup(year, month, day, dayMap[day]);
+    });
+  });
+  const shareBtn = document.getElementById('btn-share-month');
+  if(shareBtn){
+    shareBtn.addEventListener('click',()=>shareMonthCard(year, month, monthSessions, drinkDays, monthPours, brandCount, placeCount));
+  }
+}
+
+function openDayPopup(year, month, day, info){
+  const dayName = ['日','月','火','水','木','金','土'][new Date(year,month,day).getDay()];
+  document.getElementById('day-popup-date').textContent = `${year}年${month+1}月${day}日(${dayName})`;
+  let content = '';
+  info.sessions.forEach((r,i)=>{
+    const t = new Date(r.startTime);
+    const hm = String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+    const drinksHtml = r.drinks.map(d=>{
+      const ratingStars = d.rating>0 ? ` <span style="color:var(--gold-bright)">${'★'.repeat(d.rating)}</span>` : '';
+      return `${d.emoji}${d.brand||d.jp}${ratingStars}`;
+    }).join(' / ');
+    content += `<div style="padding:10px 0;${i<info.sessions.length-1?'border-bottom:1px dashed var(--wood-light)':''}">
+      <div style="font-family:var(--font-display);font-size:13px;color:var(--ink);margin-bottom:4px">
+        <span style="color:var(--accent-wine);font-size:11px;margin-right:6px">${hm}〜</span>
+        ${r.place?`<span>${r.place}</span>`:'<span style="color:var(--ink-muted)">記録</span>'}
+        ${r.people?`<span style="color:var(--ink-muted);font-size:11px;margin-left:6px">with ${r.people}</span>`:''}
+      </div>
+      <div style="font-size:12px;color:var(--ink-soft)">${drinksHtml}</div>
+    </div>`;
+  });
+  document.getElementById('day-popup-content').innerHTML = content;
+  document.getElementById('day-popup').classList.add('active');
+}
+function closeDayPopup(){document.getElementById('day-popup').classList.remove('active')}
+
+/* ========== 機能C: シェア画像生成 ========== */
+function shareMonthCard(year, month, monthSessions, drinkDays, monthPours, brandCount, placeCount){
+  const monthNames = ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走'];
+  const topBrands = Object.entries(brandCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topPlaces = Object.entries(placeCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  const card = document.getElementById('share-card');
+  card.innerHTML = `
+    <div class="share-card-header">
+      <div class="share-card-brand">晩酌手帖</div>
+      <div class="share-card-brand-en">Banshaku Techō</div>
+    </div>
+    <div class="share-card-month">${year}年 ${month+1}月</div>
+    <div class="share-card-subtitle">Monthly Report · ${monthNames[month]}</div>
+    <div class="share-card-hero">
+      <div class="share-card-hero-num">${monthSessions.length}<span class="unit">夜</span></div>
+      <div class="share-card-hero-lbl">今月の晩酌</div>
+    </div>
+    <div class="share-card-stats">
+      <div class="share-card-stat"><div class="share-card-stat-val">${drinkDays}<span class="unit">日</span></div><div class="share-card-stat-lbl">飲酒日</div></div>
+      <div class="share-card-stat"><div class="share-card-stat-val">${monthPours}<span class="unit">杯</span></div><div class="share-card-stat-lbl">総杯数</div></div>
+      <div class="share-card-stat"><div class="share-card-stat-val">${Object.keys(placeCount).length}<span class="unit">軒</span></div><div class="share-card-stat-lbl">訪れた店</div></div>
+      <div class="share-card-stat"><div class="share-card-stat-val">${Object.keys(brandCount).length}<span class="unit">銘</span></div><div class="share-card-stat-lbl">銘柄数</div></div>
+    </div>
+    ${topBrands.length>0?`<div class="share-card-highlight">
+      <div class="share-card-h-title">記した銘柄</div>
+      ${topBrands.map(([n,c])=>`<div class="share-card-h-row"><span class="share-card-h-name">${n}</span><span class="share-card-h-val">${c}回</span></div>`).join('')}
+    </div>`:''}
+    ${topPlaces.length>0?`<div class="share-card-highlight">
+      <div class="share-card-h-title">訪れた店</div>
+      ${topPlaces.map(([n,c])=>`<div class="share-card-h-row"><span class="share-card-h-name">${n}</span><span class="share-card-h-val">${c}回</span></div>`).join('')}
+    </div>`:''}
+    <div class="share-card-footer">
+      — since tonight —
+      <br>
+      <span class="share-card-seal">晩酌月報</span>
+    </div>
+  `;
+
+  // html2canvasでレンダリング
+  setTimeout(()=>{
+    html2canvas(card, {
+      backgroundColor: '#f7f1e3',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    }).then(canvas=>{
+      canvas.toBlob(async blob=>{
+        if(!blob) return;
+        const fileName = `banshaku_${year}_${String(month+1).padStart(2,'0')}.png`;
+        // Web Share API が使えれば共有
+        try {
+          const file = new File([blob], fileName, {type:'image/png'});
+          if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+            await navigator.share({
+              files:[file],
+              title:'晩酌手帖 月報',
+              text:`${year}年${month+1}月の晩酌月報`,
+            });
+            return;
+          }
+        } catch(e){
+          // ユーザーがキャンセル等
+          if(e.name==='AbortError') return;
+        }
+        // フォールバック: ダウンロード
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    }).catch(err=>{
+      console.error(err);
+      alert('画像の生成に失敗しました');
+    });
+  }, 50);
+}
+
+/* ========== 図鑑 (★表示対応) ========== */
+function renderZukan(){
+  const box = document.getElementById('zukan-content');
+  const records = load();
+
+  const brandMap = {};
+  records.forEach(r=>{
+    r.drinks.forEach(d=>{
+      if(!d.brand)return;
+      const key = d.brand;
+      if(!brandMap[key]){
+        brandMap[key] = {
+          brand:d.brand, type:d.jp, emoji:d.emoji, typeId:d.id,
+          count:0, lastDate:null, ratingSum:0, ratingCount:0
+        };
+      }
+      brandMap[key].count++;
+      if(d.rating && d.rating>0){
+        brandMap[key].ratingSum += d.rating;
+        brandMap[key].ratingCount++;
+      }
+      const t = new Date(d.time || r.startTime);
+      if(!brandMap[key].lastDate || t > brandMap[key].lastDate) brandMap[key].lastDate = t;
+    });
+  });
+
+  const allBrands = Object.values(brandMap);
+
+  if(allBrands.length===0){
+    box.innerHTML = `
+      <div class="empty-state">
+        <div class="ideogram">蔵</div>
+        <h3>図鑑は空のまま</h3>
+        <p>add brand names to collect</p>
+      </div>
+    `;
+    return;
+  }
+
+  const typeSet = new Set();
+  allBrands.forEach(b=>typeSet.add(b.typeId));
+  const availableTypes = DRINKS.filter(d=>typeSet.has(d.id));
+
+  const filtered = zukanFilter==='all' ? allBrands : allBrands.filter(b=>b.typeId===zukanFilter);
+  filtered.sort((a,b)=>b.count-a.count);
+
+  const filterChips = `
+    <button class="filter-chip ${zukanFilter==='all'?'active':''}" data-f="all">すべて (${allBrands.length})</button>
+    ${availableTypes.map(d=>`<button class="filter-chip ${zukanFilter===d.id?'active':''}" data-f="${d.id}">${d.emoji} ${d.jp}</button>`).join('')}
+  `;
+
+  const now = new Date();
+  const cards = filtered.map(b=>{
+    const lastDiff = Math.floor((now - b.lastDate)/(1000*60*60*24));
+    let lastStr;
+    if(lastDiff===0) lastStr='今日';
+    else if(lastDiff===1) lastStr='昨日';
+    else if(lastDiff<7) lastStr=`${lastDiff}日前`;
+    else if(lastDiff<30) lastStr=`${Math.floor(lastDiff/7)}週前`;
+    else if(lastDiff<365) lastStr=`${Math.floor(lastDiff/30)}ヶ月前`;
+    else lastStr=`${Math.floor(lastDiff/365)}年前`;
+
+    // 平均★
+    let ratingHtml = '';
+    if(b.ratingCount>0){
+      const avg = Math.round(b.ratingSum/b.ratingCount);
+      ratingHtml = `<div class="zk-rating">`+
+        [1,2,3].map(s=>`<span class="${s<=avg?'star':'star-empty'}">★</span>`).join('')+
+        `</div>`;
+    }
+
+    return `<div class="zukan-card">
+      <div class="zk-header">
+        <span class="zk-emoji">${b.emoji}</span>
+        <span class="zk-type">${b.type}</span>
+      </div>
+      <div class="zk-brand-name">${b.brand}</div>
+      ${ratingHtml}
+      <div class="zk-stats">
+        <div class="zk-count">${b.count}<span class="unit">回</span></div>
+        <div class="zk-last">
+          <span class="label">Last</span>
+          ${lastStr}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="zukan-summary">
+      <div class="zukan-summary-num">${allBrands.length}<span class="unit">銘</span></div>
+      <div class="zukan-summary-label">— 蔵に収めた銘柄の数 —</div>
+    </div>
+    <div class="zukan-filter">${filterChips}</div>
+    <div class="zukan-grid">${cards}</div>
+  `;
+
+  box.querySelectorAll('.filter-chip').forEach(c=>{
+    c.addEventListener('click',()=>{zukanFilter=c.dataset.f; renderZukan();});
+  });
+}
+
+/* ========== 勲章判定 ========== */
+function computeMedalProgress(medal, ctx){
+  const {totalSessions, drinkTypes, brands, venues, solo, withPeople, homeCount} = ctx;
+  switch(medal.id){
+    case 'first':case 'decade':case 'quinquag':case 'centennial':
+      return Math.min(totalSessions, medal.target);
+    case 'five':case 'all':
+      return Math.min(drinkTypes.size, medal.target);
+    case 'brand5':case 'brand25':
+      return Math.min(brands.size, medal.target);
+    case 'home': return homeCount>0?1:0;
+    case 'venue5': return Math.min(venues.size, medal.target);
+    case 'solo': return solo>0?1:0;
+    case 'pair': return withPeople>0?1:0;
+  }
+  return 0;
+}
+
+function buildContext(){
+  const records=load();
+  const drinkTypes=new Set(), brands=new Set(), venues=new Set();
+  let solo=0, withPeople=0, homeCount=0;
+  records.forEach(r=>{
+    r.drinks.forEach(d=>{
+      if(d.id&&d.id!=='other')drinkTypes.add(d.id);
+      if(d.brand)brands.add(d.brand);
+    });
+    if(r.place){
+      venues.add(r.place);
+      if(/自宅|家|うち|ホーム/i.test(r.place))homeCount++;
+    }
+    if(r.people){
+      const soloMatch=/一人|ひとり|独り|独酌|solo/i.test(r.people);
+      if(soloMatch||r.people.trim().length===0)solo++;
+      else withPeople++;
+    }
+  });
+  return {totalSessions:records.length, drinkTypes, brands, venues,
+          solo, withPeople, homeCount};
+}
+
+function checkAndUnlockMedals(){
+  const ctx=buildContext();const earned=loadMedals();const newly=[];
+  ALL_MEDALS.forEach(m=>{
+    const progress=computeMedalProgress(m,ctx);
+    if(progress>=m.target&&!earned[m.id]){
+      earned[m.id]={at:new Date().toISOString(),seen:false};
+      newly.push(m);
+    }
+  });
+  saveMedals(earned);return newly;
+}
+
+function updateMedalDot(){
+  const earned=loadMedals();
+  const unseen=Object.values(earned).some(v=>!v.seen);
+  const dot=document.getElementById('tab-dot');
+  if(dot)dot.style.display=unseen?'inline-block':'none';
+}
+
+function renderMedals(){
+  const box=document.getElementById('medals-content');
+  const ctx=buildContext();const earned=loadMedals();
+  const totalEarned=Object.keys(earned).length;const totalAll=ALL_MEDALS.length;
+  let html=`<div class="medal-summary">
+    <div class="medal-summary-num">${totalEarned}<span class="total">/${totalAll}</span></div>
+    <div class="medal-summary-label">— 授与された勲章 · Medals Earned —</div>
+  </div>`;
+  MEDAL_CATEGORIES.forEach(cat=>{
+    const earnedInCat=cat.medals.filter(m=>earned[m.id]).length;
+    html+=`<div class="badge-category">
+      <div class="badge-cat-header">
+        <span class="badge-cat-title">${cat.name}</span>
+        <span class="badge-cat-progress">${cat.en} · ${earnedInCat}/${cat.medals.length}</span>
+      </div>
+      <div class="badge-grid">
+        ${cat.medals.map(m=>{
+          const progress=computeMedalProgress(m,ctx);
+          const isEarned=!!earned[m.id];
+          const pct=Math.min(100,(progress/m.target)*100);
+          const isNew=isEarned&&!earned[m.id].seen;
+          return `<div class="badge-card ${isEarned?'':'locked'}" title="${m.desc}">
+            ${isNew?'<span class="badge-ribbon">新</span>':''}
+            <div class="medal-circle medal-${m.rank}"><span class="medal-emoji">${m.emoji}</span></div>
+            <div class="badge-name">${m.name}</div>
+            <div class="badge-desc">${m.desc}</div>
+            ${!isEarned?`<div class="badge-progress-bar"><div class="badge-progress-fill" style="width:${pct}%"></div></div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  box.innerHTML=html;
+}
+
+function showNextUnlockModal(){
+  if(unlockQueue.length===0){
+    document.getElementById('unlock-modal').classList.remove('active');
+    switchTab('medals');return;
+  }
+  const medal=unlockQueue[0];
+  document.getElementById('unlock-emoji').textContent=medal.emoji;
+  document.getElementById('unlock-name').textContent=medal.name;
+  document.getElementById('unlock-desc').textContent=medal.desc;
+  document.getElementById('unlock-quote').textContent=`「${medal.quote}」`;
+  const m=document.getElementById('unlock-medal');
+  m.style.background=getMedalBg(medal.rank);
+  const counter=document.getElementById('unlock-counter');
+  counter.textContent=unlockQueue.length>1?`${unlockQueue.length}件残り`:'';
+  document.getElementById('unlock-modal').classList.add('active');
+  launchConfetti();
+}
+function getMedalBg(rank){
+  const map={
+    bronze:'radial-gradient(circle at 30% 30%, #e4a778, #cd7f32 60%, #8b5a2b 100%)',
+    silver:'radial-gradient(circle at 30% 30%, #f0f0f0, #c0c0c0 60%, #808080 100%)',
+    gold:'radial-gradient(circle at 30% 30%, #f4d07a, #daa520 60%, #b8860b 100%)',
+    platinum:'radial-gradient(circle at 30% 30%, #f5f0db, #c77d2c 60%, #8b2635 100%)',
+  };
+  return map[rank]||map.gold;
+}
+function closeUnlockModal(){
+  unlockQueue.shift();
+  if(unlockQueue.length>0){
+    document.getElementById('unlock-modal').classList.remove('active');
+    setTimeout(showNextUnlockModal,250);
+  } else {
+    document.getElementById('unlock-modal').classList.remove('active');
+    renderMedals();updateMedalDot();switchTab('medals');
+  }
+}
+function launchConfetti(){
+  const modal=document.querySelector('.unlock-modal');
+  const colors=['#daa520','#c77d2c','#8b2635','#5a6e3a','#a67848'];
+  for(let i=0;i<24;i++){
+    const p=document.createElement('div');
+    p.className='confetti';p.style.background=colors[i%colors.length];
+    p.style.left=(30+Math.random()*40)+'%';p.style.top='30%';
+    p.style.transform=`rotate(${Math.random()*360}deg)`;
+    modal.appendChild(p);
+    const dx=(Math.random()-0.5)*300;const dy=300+Math.random()*200;
+    const rot=(Math.random()-0.5)*720;
+    p.animate([
+      {transform:`translate(0,0) rotate(0)`,opacity:1},
+      {transform:`translate(${dx}px,${dy}px) rotate(${rot}deg)`,opacity:0}
+    ],{duration:2000+Math.random()*1000,easing:'cubic-bezier(0.22,1,0.36,1)'}).onfinish=()=>p.remove();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
